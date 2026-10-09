@@ -1,0 +1,31 @@
+name: seal-build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  pack:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '14.15.4'
+      - name: Use npm 7.6.0 (the npm that packed the public tarball)
+        run: npm install -g npm@7.6.0
+      - name: Install build dependencies
+        run: npm install --ignore-scripts --legacy-peer-deps --no-audit --no-fund
+      - name: Rebuild the dist/ bundles from lib/
+        # dist/msgpack5.js and dist/msgpack5.min.js are generated from lib/ by `npm run build`
+        # (browserify + uglify-js); rebuild them so the shipped bundles carry the patched lib
+        run: npm run build
+      - name: Pack
+        run: |
+          # keep this workflow and the build-only install out of the tarball (no files allowlist / .npmignore upstream)
+          rm -rf .github node_modules package-lock.json
+          npm pack
+      - uses: actions/upload-artifact@v4
+        with:
+          name: msgpack5-3.6.1
+          path: msgpack5-*.tgz

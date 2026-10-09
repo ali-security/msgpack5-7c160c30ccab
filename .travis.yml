@@ -1,8 +1,22 @@
 language: node_js
 node_js:
+  - "14"
   - "0.10"
   - "0.12"
   - "4"
   - "6"
   - "7"
   - "8"
+install:
+  - npm install --ignore-scripts
+  # bl@1.2.3 (latest in ^1.2.1) calls Math.trunc, absent on Node 0.10; bl@1.2.2 is in range and ES5-only
+  - if [[ "$TRAVIS_NODE_VERSION" == "0.10" ]]; then npm install --ignore-scripts bl@1.2.2; fi
+before_script:
+  # dist/ is the browserify bundle of lib/ (`npm run build`): rebuild it so the bundles under test carry
+  # the patched lib, as seal-build.yml does before packing. The bundle embeds buffer@5, which cannot run
+  # on Node 0.10, so the bundle tests are skipped there and the rebuild is not needed.
+  - if [[ "$TRAVIS_NODE_VERSION" != "0.10" ]]; then npm run build; fi
+script:
+  # run tape directly (no `standard` lint gate, no faucet so the tape summary stays in the log);
+  # object-prototype-poisoning.js uses `const` in strict mode, a SyntaxError on Node 0.x
+  - if [[ "$TRAVIS_NODE_VERSION" == 0.* ]]; then node node_modules/tape/bin/tape $(ls test/*.js | grep -v object-prototype-poisoning); else node node_modules/tape/bin/tape test/*.js; fi
