@@ -11,11 +11,22 @@ function msgpack (options) {
   var encodingTypes = []
   var decodingTypes = []
 
-  options = options || {
+  var userOptions = options || {}
+  options = {
     forceFloat64: false,
     compatibilityMode: false,
-    // options.protoAction: 'error' (default) / 'remove' / 'ignore'
     protoAction: 'error'
+  }
+
+  for (var key in userOptions) {
+    if (Object.prototype.hasOwnProperty.call(userOptions, key)) {
+      options[key] = userOptions[key]
+    }
+  }
+
+  if (options.protoAction === undefined) options.protoAction = 'error'
+  if (options.protoAction !== 'error' && options.protoAction !== 'remove' && options.protoAction !== 'ignore') {
+    throw new TypeError('protoAction must be "error", "remove", or "ignore"')
   }
 
   function registerEncoder (check, encode) {
