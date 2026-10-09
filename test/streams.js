@@ -182,3 +182,33 @@ test('concatenated buffers work', function (t) {
 
   encoder.end()
 })
+
+// the stream Decoder must not recurse once per buffered value: a single chunk
+// carrying many small values used to overflow the call stack.
+// The browser bundles are exercised too, as they ship the same Decoder; they
+// embed buffer@5, which cannot run on Node 0.10, so they are skipped there.
+var bundlesUnsupported = /^v0\.10\./.test(process.version)
+var implementations = [
+  { name: 'lib', msgpack: msgpack, skip: false },
+  { name: 'dist', msgpack: require('../dist/msgpack5'), skip: bundlesUnsupported },
+  { name: 'dist min', msgpack: require('../dist/msgpack5.min'), skip: bundlesUnsupported }
+]
+
+implementations.forEach(function (impl) {
+  test('many concatenated values do not overflow the stack (' + impl.name + ')', { skip: impl.skip }, function (t) {
+    t.plan(2)
+
+    var total = 50000
+    var decoder = impl.msgpack().decoder()
+    var decoded = 0
+
+    decoder.on('data', function () {
+      decoded++
+    })
+
+    decoder.write(Buffer.alloc(total, 0x01), function (err) {
+      t.error(err, 'must decode without an error')
+      t.equal(decoded, total, 'must decode every value')
+    })
+  })
+})
