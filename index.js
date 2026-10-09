@@ -15,6 +15,7 @@ function msgpack (options) {
   options = {
     forceFloat64: false,
     compatibilityMode: false,
+    maxDepth: 100,
     protoAction: 'error'
   }
 
